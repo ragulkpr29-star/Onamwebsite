@@ -50,7 +50,7 @@ export function RulesStep({
           onClick={onBack}
           className="font-ui rounded-full border border-white/25 px-6 py-3.5 text-xs font-bold tracking-[0.18em] text-white/80 uppercase transition-colors hover:bg-white/10"
         >
-          ← Back
+          ←
         </button>
         <button
           type="button"
