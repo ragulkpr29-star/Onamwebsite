@@ -1,0 +1,509 @@
+import { useMemo, useState } from "react";
+import {
+  createFileRoute,
+  Link,
+  Navigate,
+} from "@tanstack/react-router";
+import registerBg from "@/assets/register-bg.png";
+
+import { getEvent } from "@/data/events";
+
+import {
+  isValidRollNo,
+  isValidEmail,
+  isValidPhone,
+  normalizeRollNo,
+} from "@/lib/roll";
+
+import {
+  ProgressIndicator,
+  STEP_ORDER,
+  type StepId,
+} from "@/components/registration/ProgressIndicator";
+
+import { RulesStep } from "@/components/registration/RulesStep";
+import { CategoryStep } from "@/components/registration/CategoryStep";
+import { TeamStep } from "@/components/registration/TeamStep";
+import { SuccessStep } from "@/components/registration/SuccessStep";
+
+import type { MemberDraft } from "@/components/registration/MemberForm";
+
+type Search = {
+  event?: string | undefined;
+};
+
+export const Route = createFileRoute("/register")({
+  validateSearch: (search: Record<string, unknown>): Search => ({
+    event:
+      typeof search["event"] === "string"
+        ? search["event"]
+        : undefined,
+  }),
+
+  head: () => ({
+    meta: [
+      {
+        title: "Register — ONAM 2K26 | Kongu Engineering College",
+      },
+      {
+        name: "description",
+        content:
+          "Register your team for ONAM 2K26 at Kongu Engineering College — Pookkolam, Fashion Parade, Tug of War, Editing and Dual Dance.",
+      },
+      {
+        property: "og:title",
+        content: "Register — ONAM 2K26",
+      },
+      {
+        property: "og:description",
+        content:
+          "Step-by-step team registration for ONAM 2K26 celebrations at KEC.",
+      },
+      {
+        property: "og:type",
+        content: "website",
+      },
+      {
+        name: "twitter:card",
+        content: "summary_large_image",
+      },
+    ],
+  }),
+
+  component: RegisterPage,
+});
+
+const emptyMembers = (count: number): MemberDraft[] =>
+  Array.from(
+    { length: count },
+    () => ({
+      name: "",
+      rollNo: "",
+      email: "",
+      phone: "",
+    }),
+  );
+
+function RegisterPage() {
+  const { event: presetEvent } = Route.useSearch();
+
+  /*
+   * IMPORTANT:
+   * We are NOT using navigate() for the success page.
+   *
+   * The success screen is shown inside this same route.
+   * This prevents TanStack Router from falling back to "/".
+   */
+
+  const validPreset =
+    presetEvent && getEvent(presetEvent)
+      ? presetEvent
+      : null;
+
+  const [step, setStep] = useState<StepId>("rules");
+
+  const [direction, setDirection] =
+    useState<1 | -1>(1);
+
+  const [accepted, setAccepted] =
+    useState(false);
+
+  const [eventId, setEventId] =
+    useState<string | null>(validPreset);
+
+  const [category, setCategory] =
+    useState<string | null>(null);
+
+  const [members, setMembers] =
+    useState<MemberDraft[]>(
+      emptyMembers(
+        getEvent(validPreset ?? "")?.maxMembers ?? 1,
+      ),
+    );
+
+  const [error, setError] =
+    useState<string | null>(null);
+
+  const [submitting, setSubmitting] =
+    useState(false);
+
+  /*
+   * This controls the final success screen.
+   *
+   * false = registration form
+   * true  = registration successful / WhatsApp page
+   */
+  const [registrationComplete, setRegistrationComplete] =
+    useState(false);
+
+  const activeEvent = eventId
+    ? getEvent(eventId)
+    : undefined;
+
+  const hasCategory = Boolean(
+    activeEvent?.categories?.length,
+  );
+
+  const steps = useMemo<StepId[]>(
+    () =>
+      STEP_ORDER.filter(
+        (id) =>
+          id !== "category" ||
+          hasCategory,
+      ),
+    [hasCategory],
+  );
+
+  const currentIndex = Math.max(
+    0,
+    steps.indexOf(step),
+  );
+
+  const go = (
+    next: StepId,
+    dir: 1 | -1,
+  ) => {
+    setDirection(dir);
+    setStep(next);
+    setError(null);
+  };
+
+  const handleMemberChange = (
+    index: number,
+    patch: Partial<MemberDraft>,
+  ) => {
+    setMembers((prev) =>
+      prev.map((member, i) =>
+        i === index
+          ? {
+            ...member,
+            ...patch,
+          }
+          : member,
+      ),
+    );
+
+    setError(null);
+  };
+
+  /*
+   * TEMPORARY FRONTEND-ONLY SUBMISSION
+   *
+   * There is NO Supabase call here.
+   * There is NO API call here.
+   * There is NO server function here.
+   *
+   * After validation:
+   *
+   * Submit
+   *   ↓
+   * Registering...
+   *   ↓
+   * SuccessStep
+   *   ↓
+   * Join WhatsApp
+   */
+  const handleSubmit = async () => {
+    if (!activeEvent || submitting) {
+      return;
+    }
+
+    /* -----------------------------
+       Validate members
+    ----------------------------- */
+
+    for (const [
+      index,
+      member,
+    ] of members.entries()) {
+      if (member.name.trim().length < 2) {
+        setError(
+          `Please enter a valid name for member ${index + 1
+          }.`,
+        );
+        return;
+      }
+
+      if (!isValidRollNo(member.rollNo)) {
+        setError(
+          `Member ${index + 1
+          }: please enter a valid roll number.`,
+        );
+        return;
+      }
+    }
+
+    /* -----------------------------
+       Member 1 email
+    ----------------------------- */
+
+    if (
+      !isValidEmail(
+        members[0]?.email ?? "",
+      )
+    ) {
+      setError(
+        "Please enter a valid email address for Member 1.",
+      );
+      return;
+    }
+
+    /* -----------------------------
+       Member 1 phone
+    ----------------------------- */
+
+    if (
+      !isValidPhone(
+        members[0]?.phone ?? "",
+      )
+    ) {
+      setError(
+        "Please enter a valid 10-digit phone number for Member 1.",
+      );
+      return;
+    }
+
+    /* -----------------------------
+       Duplicate roll numbers
+    ----------------------------- */
+
+    const rolls = members.map((member) =>
+      normalizeRollNo(member.rollNo),
+    );
+
+    if (
+      new Set(rolls).size !==
+      rolls.length
+    ) {
+      setError(
+        "This student is already included in this team.",
+      );
+      return;
+    }
+
+    /* -----------------------------
+       Submit
+    ----------------------------- */
+
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      /*
+       * TEMPORARY MODE ONLY
+       *
+       * No database.
+       * No Supabase.
+       * No backend.
+       */
+      await new Promise<void>(
+        (resolve) =>
+          setTimeout(resolve, 700),
+      );
+
+      /*
+       * IMPORTANT:
+       *
+       * Instead of navigating to
+       * /register/success,
+       * simply show the success
+       * component inside this page.
+       *
+       * This completely avoids the
+       * TanStack Router redirect issue.
+       */
+      setRegistrationComplete(true);
+    } catch {
+      setError(
+        "Something went wrong. Please try again.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  /*
+   * If the event is invalid,
+   * go back to homepage.
+   *
+   * This is only for invalid/missing
+   * event URLs.
+   */
+  if (!validPreset) {
+    return <Navigate to="/" />;
+  }
+
+  /*
+   * SUCCESS SCREEN
+   *
+   * This is intentionally rendered
+   * BEFORE the normal registration UI.
+   *
+   * No route change occurs.
+   */
+  if (registrationComplete) {
+    return (
+      <main className="relative h-dvh w-full overflow-hidden bg-[#0b0f0c]">
+        {/* Registration Background */}
+        <img
+          src={registerBg}
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 h-full w-full scale-105 object-cover opacity-45 blur-[2px]"
+        />
+
+        {/* Dark Overlay */}
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 bg-[radial-gradient(120%_90%_at_50%_10%,rgba(6,20,12,0.55),rgba(4,8,6,0.94))]"
+        />
+
+        {/* Success Content */}
+        <div className="relative z-10 flex h-full flex-col">
+          {/* Header */}
+          <header className="flex items-center justify-between gap-4 px-5 py-4 md:px-10">
+            <Link
+              to="/"
+              className="font-display text-base font-black tracking-tight text-white md:text-lg"
+            >
+              ONAM{" "}
+              <span className="text-[#e2b93b]">
+                2K26
+              </span>
+            </Link>
+          </header>
+
+          {/* Success Step */}
+          <div className="relative flex-1 overflow-hidden">
+            <div className="absolute inset-0 flex items-center justify-center px-5 pb-10 md:px-10">
+              <div className="h-full w-full max-w-3xl">
+                <SuccessStep />
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  /*
+   * NORMAL REGISTRATION UI
+   */
+
+  return (
+    <main className="relative h-dvh w-full overflow-hidden bg-[#0b0f0c]">
+      {/* Background */}
+      <img
+        src={registerBg}
+        alt=""
+        aria-hidden="true"
+        className="absolute inset-0 h-full w-full scale-105 object-cover opacity-45 blur-[2px]"
+      />
+
+      {/* Dark Overlay */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 bg-[radial-gradient(120%_90%_at_50%_10%,rgba(6,20,12,0.55),rgba(4,8,6,0.94))]"
+      />
+
+      <div className="relative z-10 flex h-full flex-col">
+        {/* Header */}
+        <header className="flex items-center justify-between gap-4 px-5 py-4 md:px-10">
+          <Link
+            to="/"
+            className="font-display text-base font-black tracking-tight text-white md:text-lg"
+          >
+            ONAM{" "}
+            <span className="text-[#e2b93b]">
+              2K26
+            </span>
+          </Link>
+
+          <ProgressIndicator
+            steps={steps}
+            current={currentIndex}
+          />
+        </header>
+
+        {/* Step Content */}
+        <div className="relative flex-1 overflow-hidden">
+          <div
+            key={step}
+            className="absolute inset-0 overflow-hidden px-5 pb-6 md:px-10"
+            style={{
+              animation: `${direction === 1
+                  ? "slide-in-right"
+                  : "slide-in-left"
+                } 0.45s cubic-bezier(0.22,1,0.36,1) both`,
+            }}
+          >
+            <div className="mx-auto h-full w-full max-w-3xl">
+
+              {/* RULES */}
+              {step === "rules" ? (
+                <RulesStep
+                  accepted={accepted}
+                  onToggle={setAccepted}
+                  onBack={() =>
+                    window.history.back()
+                  }
+                  onContinue={() =>
+                    go(
+                      hasCategory
+                        ? "category"
+                        : "team",
+                      1,
+                    )
+                  }
+                />
+              ) : null}
+
+              {/* TUG OF WAR CATEGORY */}
+              {step === "category" &&
+                activeEvent?.categories ? (
+                <CategoryStep
+                  categories={
+                    activeEvent.categories
+                  }
+                  category={category}
+                  onSelect={setCategory}
+                  onBack={() =>
+                    go("rules", -1)
+                  }
+                  onContinue={() =>
+                    go("team", 1)
+                  }
+                />
+              ) : null}
+
+              {/* TEAM REGISTRATION */}
+              {step === "team" &&
+                activeEvent ? (
+                <TeamStep
+                  event={activeEvent}
+                  category={category}
+                  members={members}
+                  error={error}
+                  submitting={submitting}
+                  onChange={
+                    handleMemberChange
+                  }
+                  onBack={() =>
+                    go(
+                      hasCategory
+                        ? "category"
+                        : "rules",
+                      -1,
+                    )
+                  }
+                  onSubmit={handleSubmit}
+                />
+              ) : null}
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  );
+}
