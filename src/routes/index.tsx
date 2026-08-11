@@ -1,11 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 
 import { Hero } from "@/components/Hero";
 import { Footer } from "@/components/Footer";
 import { EventSelector } from "@/components/EventSelector";
-import { getEventCounts } from "@/lib/registration.functions";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -37,24 +34,27 @@ export const Route = createFileRoute("/")({
       },
     ],
   }),
-
   component: Index,
 });
 
 function Index() {
-  const fetchCounts = useServerFn(getEventCounts);
+  // FRONTEND-ONLY MODE
+  // No Supabase
+  // No API
+  // No server function
 
-  const { data: counts } = useQuery({
-    queryKey: ["eventCounts"],
-    queryFn: () => fetchCounts(),
-    initialData: {} as Record<string, number>,
-  });
+  const counts: Record<string, number> = {
+    pookkolam: 0,
+    "fashion-parade": 0,
+    "tug-of-war": 0,
+    editing: 0,
+    "dual-dance": 0,
+  };
 
   return (
     <div className="min-h-screen bg-background">
       <main>
         <Hero />
-
         <EventSelector counts={counts} />
       </main>
 
