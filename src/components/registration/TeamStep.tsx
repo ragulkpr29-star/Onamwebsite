@@ -75,7 +75,7 @@ export function TeamStep({
           disabled={submitting}
           className="font-ui rounded-full border border-white/25 px-6 py-3.5 text-xs font-bold tracking-[0.18em] text-white/80 uppercase transition-colors hover:bg-white/10 disabled:opacity-40"
         >
-          ← BACK
+          ←
         </button>
 
         <button
@@ -84,7 +84,7 @@ export function TeamStep({
           disabled={submitting}
           className="font-ui rounded-full bg-[#e2b93b] px-8 py-3.5 text-xs font-bold tracking-[0.18em] text-[#1a1408] uppercase transition-all hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {submitting ? "Registering…" : "Submit Registration"}
+          {submitting ? "Registering…" : "Submit"}
         </button>
       </div>
     </div>
