@@ -4,6 +4,7 @@ import {
   Link,
   Navigate,
 } from "@tanstack/react-router";
+
 import registerBg from "@/assets/register-bg.png";
 
 import { getEvent } from "@/data/events";
@@ -88,13 +89,9 @@ function RegisterPage() {
   const { event: presetEvent } = Route.useSearch();
 
   /*
-   * IMPORTANT:
-   * We are NOT using navigate() for the success page.
-   *
-   * The success screen is shown inside this same route.
-   * This prevents TanStack Router from falling back to "/".
+   * We are NOT navigating to a separate success route.
+   * The success screen is rendered inside this same page.
    */
-
   const validPreset =
     presetEvent && getEvent(presetEvent)
       ? presetEvent
@@ -127,12 +124,6 @@ function RegisterPage() {
   const [submitting, setSubmitting] =
     useState(false);
 
-  /*
-   * This controls the final success screen.
-   *
-   * false = registration form
-   * true  = registration successful / WhatsApp page
-   */
   const [registrationComplete, setRegistrationComplete] =
     useState(false);
 
@@ -166,6 +157,15 @@ function RegisterPage() {
     setDirection(dir);
     setStep(next);
     setError(null);
+
+    /*
+     * When changing registration steps,
+     * return the page to the top.
+     */
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
   };
 
   const handleMemberChange = (
@@ -188,30 +188,15 @@ function RegisterPage() {
 
   /*
    * TEMPORARY FRONTEND-ONLY SUBMISSION
-   *
-   * There is NO Supabase call here.
-   * There is NO API call here.
-   * There is NO server function here.
-   *
-   * After validation:
-   *
-   * Submit
-   *   ↓
-   * Registering...
-   *   ↓
-   * SuccessStep
-   *   ↓
-   * Join WhatsApp
    */
   const handleSubmit = async () => {
     if (!activeEvent || submitting) {
       return;
     }
 
-    /* -----------------------------
-       Validate members
-    ----------------------------- */
-
+    /*
+     * Validate members
+     */
     for (const [
       index,
       member,
@@ -221,6 +206,15 @@ function RegisterPage() {
           `Please enter a valid name for member ${index + 1
           }.`,
         );
+
+        /*
+         * Scroll to the error
+         */
+        window.scrollTo({
+          top: document.body.scrollHeight,
+          behavior: "smooth",
+        });
+
         return;
       }
 
@@ -229,14 +223,14 @@ function RegisterPage() {
           `Member ${index + 1
           }: please enter a valid roll number.`,
         );
+
         return;
       }
     }
 
-    /* -----------------------------
-       Member 1 email
-    ----------------------------- */
-
+    /*
+     * Member 1 email
+     */
     if (
       !isValidEmail(
         members[0]?.email ?? "",
@@ -245,13 +239,13 @@ function RegisterPage() {
       setError(
         "Please enter a valid email address for Member 1.",
       );
+
       return;
     }
 
-    /* -----------------------------
-       Member 1 phone
-    ----------------------------- */
-
+    /*
+     * Member 1 phone
+     */
     if (
       !isValidPhone(
         members[0]?.phone ?? "",
@@ -260,13 +254,13 @@ function RegisterPage() {
       setError(
         "Please enter a valid 10-digit phone number for Member 1.",
       );
+
       return;
     }
 
-    /* -----------------------------
-       Duplicate roll numbers
-    ----------------------------- */
-
+    /*
+     * Duplicate roll numbers
+     */
     const rolls = members.map((member) =>
       normalizeRollNo(member.rollNo),
     );
@@ -278,41 +272,34 @@ function RegisterPage() {
       setError(
         "This student is already included in this team.",
       );
+
       return;
     }
 
-    /* -----------------------------
-       Submit
-    ----------------------------- */
-
+    /*
+     * Submit
+     */
     setSubmitting(true);
     setError(null);
 
     try {
       /*
-       * TEMPORARY MODE ONLY
-       *
-       * No database.
-       * No Supabase.
-       * No backend.
+       * Temporary frontend-only delay
        */
       await new Promise<void>(
         (resolve) =>
           setTimeout(resolve, 700),
       );
 
-      /*
-       * IMPORTANT:
-       *
-       * Instead of navigating to
-       * /register/success,
-       * simply show the success
-       * component inside this page.
-       *
-       * This completely avoids the
-       * TanStack Router redirect issue.
-       */
       setRegistrationComplete(true);
+
+      /*
+       * Return to top after success
+       */
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
     } catch {
       setError(
         "Something went wrong. Please try again.",
@@ -323,43 +310,38 @@ function RegisterPage() {
   };
 
   /*
-   * If the event is invalid,
-   * go back to homepage.
-   *
-   * This is only for invalid/missing
-   * event URLs.
+   * Invalid event
    */
   if (!validPreset) {
     return <Navigate to="/" />;
   }
 
   /*
+   * ==========================================
    * SUCCESS SCREEN
-   *
-   * This is intentionally rendered
-   * BEFORE the normal registration UI.
-   *
-   * No route change occurs.
+   * ==========================================
    */
   if (registrationComplete) {
     return (
-      <main className="relative h-dvh w-full overflow-hidden bg-[#0b0f0c]">
-        {/* Registration Background */}
+      <main className="relative min-h-screen w-full overflow-x-hidden bg-[#0b0f0c]">
+
+        {/* Fixed Background */}
         <img
           src={registerBg}
           alt=""
           aria-hidden="true"
-          className="absolute inset-0 h-full w-full scale-105 object-cover opacity-45 blur-[2px]"
+          className="fixed inset-0 h-full w-full scale-105 object-cover opacity-45 blur-[2px]"
         />
 
-        {/* Dark Overlay */}
+        {/* Fixed Dark Overlay */}
         <div
           aria-hidden="true"
-          className="absolute inset-0 bg-[radial-gradient(120%_90%_at_50%_10%,rgba(6,20,12,0.55),rgba(4,8,6,0.94))]"
+          className="fixed inset-0 bg-[radial-gradient(120%_90%_at_50%_10%,rgba(6,20,12,0.55),rgba(4,8,6,0.94))]"
         />
 
-        {/* Success Content */}
-        <div className="relative z-10 flex h-full flex-col">
+        {/* Scrollable Content */}
+        <div className="relative z-10 min-h-screen">
+
           {/* Header */}
           <header className="flex items-center justify-between gap-4 px-5 py-4 md:px-10">
             <Link
@@ -371,12 +353,17 @@ function RegisterPage() {
                 2K26
               </span>
             </Link>
+
+            <ProgressIndicator
+              steps={steps}
+              current={currentIndex}
+            />
           </header>
 
-          {/* Success Step */}
-          <div className="relative flex-1 overflow-hidden">
-            <div className="absolute inset-0 flex items-center justify-center px-5 pb-10 md:px-10">
-              <div className="h-full w-full max-w-3xl">
+          {/* Success Content */}
+          <div className="px-5 pb-12 md:px-10 md:pb-16">
+            <div className="mx-auto w-full max-w-3xl">
+              <div className="w-full">
                 <SuccessStep />
               </div>
             </div>
@@ -387,28 +374,44 @@ function RegisterPage() {
   }
 
   /*
+   * ==========================================
    * NORMAL REGISTRATION UI
+   * ==========================================
    */
 
   return (
-    <main className="relative h-dvh w-full overflow-hidden bg-[#0b0f0c]">
-      {/* Background */}
+    <main className="relative min-h-screen w-full overflow-x-hidden bg-[#0b0f0c]">
+
+      {/* ======================================
+          BACKGROUND
+          ====================================== */}
+
       <img
         src={registerBg}
         alt=""
         aria-hidden="true"
-        className="absolute inset-0 h-full w-full scale-105 object-cover opacity-45 blur-[2px]"
+        className="fixed inset-0 h-full w-full scale-105 object-cover opacity-45 blur-[2px]"
       />
 
       {/* Dark Overlay */}
       <div
         aria-hidden="true"
-        className="absolute inset-0 bg-[radial-gradient(120%_90%_at_50%_10%,rgba(6,20,12,0.55),rgba(4,8,6,0.94))]"
+        className="fixed inset-0 bg-[radial-gradient(120%_90%_at_50%_10%,rgba(6,20,12,0.55),rgba(4,8,6,0.94))]"
       />
 
-      <div className="relative z-10 flex h-full flex-col">
-        {/* Header */}
-        <header className="flex items-center justify-between gap-4 px-5 py-4 md:px-10">
+      {/* ======================================
+          PAGE CONTENT
+          ====================================== */}
+
+      <div className="relative z-10 min-h-screen">
+
+        {/* ====================================
+            HEADER
+            ==================================== */}
+
+        <header className="sticky top-0 z-30 flex items-center justify-between gap-4 border-b border-white/5 bg-[#07100b]/70 px-5 py-4 backdrop-blur-md md:px-10">
+
+          {/* Logo */}
           <Link
             to="/"
             className="font-display text-base font-black tracking-tight text-white md:text-lg"
@@ -419,27 +422,36 @@ function RegisterPage() {
             </span>
           </Link>
 
+          {/* Progress */}
           <ProgressIndicator
             steps={steps}
             current={currentIndex}
           />
         </header>
 
-        {/* Step Content */}
-        <div className="relative flex-1 overflow-hidden">
-          <div
-            key={step}
-            className="absolute inset-0 overflow-hidden px-5 pb-6 md:px-10"
-            style={{
-              animation: `${direction === 1
-                  ? "slide-in-right"
-                  : "slide-in-left"
-                } 0.45s cubic-bezier(0.22,1,0.36,1) both`,
-            }}
-          >
-            <div className="mx-auto h-full w-full max-w-3xl">
+        {/* ====================================
+            MAIN REGISTRATION CONTENT
+            ==================================== */}
 
-              {/* RULES */}
+        <div className="px-5 pb-16 pt-4 md:px-10 md:pb-20 md:pt-8">
+
+          <div className="mx-auto w-full max-w-3xl">
+
+            <div
+              key={step}
+              className="w-full"
+              style={{
+                animation: `${direction === 1
+                    ? "slide-in-right"
+                    : "slide-in-left"
+                  } 0.45s cubic-bezier(0.22,1,0.36,1) both`,
+              }}
+            >
+
+              {/* ==================================
+                  RULES
+                  ================================== */}
+
               {step === "rules" ? (
                 <RulesStep
                   accepted={accepted}
@@ -458,7 +470,10 @@ function RegisterPage() {
                 />
               ) : null}
 
-              {/* TUG OF WAR CATEGORY */}
+              {/* ==================================
+                  CATEGORY
+                  ================================== */}
+
               {step === "category" &&
                 activeEvent?.categories ? (
                 <CategoryStep
@@ -476,7 +491,10 @@ function RegisterPage() {
                 />
               ) : null}
 
-              {/* TEAM REGISTRATION */}
+              {/* ==================================
+                  TEAM
+                  ================================== */}
+
               {step === "team" &&
                 activeEvent ? (
                 <TeamStep
