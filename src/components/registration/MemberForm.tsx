@@ -18,92 +18,153 @@ export function MemberForm({
 }) {
   const derived = deriveMember(member.rollNo);
   const isFirst = index === 0;
+
   const nameId = `member-${index}-name`;
   const rollId = `member-${index}-roll`;
+
+  /*
+   * Clean input style:
+   * - No large outer box
+   * - Comfortable height on mobile
+   * - Clear borders
+   * - Good text visibility
+   */
   const inputClass =
-    "mt-1 h-11 w-full rounded-lg border border-white/20 bg-black/30 px-3 text-sm text-white outline-none transition-colors placeholder:text-white/30 focus:border-[#e2b93b]";
-  const labelClass = "font-ui text-[10px] tracking-[0.14em] text-white/60 uppercase";
+    "mt-2 h-12 w-full rounded-lg border border-white/20 bg-black/25 px-4 text-sm text-white outline-none transition-all placeholder:text-white/30 focus:border-[#e2b93b] focus:bg-black/35";
+
+  const readOnlyClass =
+    "mt-2 h-12 w-full rounded-lg border border-white/10 bg-black/20 px-4 text-sm text-white/70 outline-none";
+
+  const labelClass =
+    "font-ui text-[10px] font-semibold tracking-[0.14em] text-white/65 uppercase";
 
   return (
-    <fieldset className="rounded-xl border border-white/15 bg-white/5 p-3.5">
-      <legend className="font-ui px-2 text-[10px] font-bold tracking-[0.2em] text-[#e2b93b] uppercase">
+    <fieldset className="space-y-4">
+      {/* Member title */}
+      <legend className="font-ui mb-4 text-[10px] font-bold tracking-[0.2em] text-[#e2b93b] uppercase">
         Member {index + 1}
       </legend>
-      <div className="grid gap-2.5 sm:grid-cols-2">
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {/* Full Name */}
         <div>
           <label htmlFor={nameId} className={labelClass}>
             Full Name
           </label>
+
           <input
             id={nameId}
+            type="text"
             value={member.name}
             maxLength={80}
             autoComplete="off"
-            onChange={(e) => onChange(index, { name: e.target.value })}
+            onChange={(e) =>
+              onChange(index, {
+                name: e.target.value,
+              })
+            }
             className={inputClass}
             placeholder="Enter full name"
           />
         </div>
+
+        {/* Roll Number */}
         <div>
           <label htmlFor={rollId} className={labelClass}>
             Roll Number
           </label>
+
           <input
             id={rollId}
+            type="text"
             value={member.rollNo}
             maxLength={12}
             autoComplete="off"
-            onChange={(e) => onChange(index, { rollNo: e.target.value.toUpperCase() })}
+            onChange={(e) =>
+              onChange(index, {
+                rollNo: e.target.value.toUpperCase(),
+              })
+            }
             className={`${inputClass} tracking-wide uppercase`}
             placeholder="25CSR123"
           />
         </div>
 
+        {/* Member 1 additional details */}
         {isFirst ? (
           <>
+            {/* Department */}
             <div>
-              <label htmlFor={`member-${index}-dept`} className={labelClass}>
+              <label
+                htmlFor={`member-${index}-dept`}
+                className={labelClass}
+              >
                 Department
               </label>
+
               <input
                 id={`member-${index}-dept`}
+                type="text"
                 readOnly
                 value={derived.department}
                 placeholder="—"
-                className="mt-1 h-11 w-full rounded-lg border border-white/10 bg-black/20 px-3 text-sm text-white/70 outline-none"
+                className={readOnlyClass}
               />
             </div>
+
+            {/* Year */}
             <div>
-              <label htmlFor={`member-${index}-year`} className={labelClass}>
+              <label
+                htmlFor={`member-${index}-year`}
+                className={labelClass}
+              >
                 Year
               </label>
+
               <input
                 id={`member-${index}-year`}
+                type="text"
                 readOnly
                 value={derived.year}
                 placeholder="—"
-                className="mt-1 h-11 w-full rounded-lg border border-white/10 bg-black/20 px-3 text-sm text-white/70 outline-none"
+                className={readOnlyClass}
               />
             </div>
+
+            {/* Email */}
             <div>
-              <label htmlFor={`member-${index}-email`} className={labelClass}>
+              <label
+                htmlFor={`member-${index}-email`}
+                className={labelClass}
+              >
                 Mail ID
               </label>
+
               <input
                 id={`member-${index}-email`}
                 type="email"
                 value={member.email ?? ""}
                 maxLength={120}
                 autoComplete="off"
-                onChange={(e) => onChange(index, { email: e.target.value })}
+                onChange={(e) =>
+                  onChange(index, {
+                    email: e.target.value,
+                  })
+                }
                 className={inputClass}
                 placeholder="name@example.com"
               />
             </div>
+
+            {/* Phone */}
             <div>
-              <label htmlFor={`member-${index}-phone`} className={labelClass}>
+              <label
+                htmlFor={`member-${index}-phone`}
+                className={labelClass}
+              >
                 Phone Number
               </label>
+
               <input
                 id={`member-${index}-phone`}
                 type="tel"
@@ -112,7 +173,11 @@ export function MemberForm({
                 maxLength={10}
                 autoComplete="off"
                 onChange={(e) =>
-                  onChange(index, { phone: e.target.value.replace(/\D/g, "").slice(0, 10) })
+                  onChange(index, {
+                    phone: e.target.value
+                      .replace(/\D/g, "")
+                      .slice(0, 10),
+                  })
                 }
                 className={inputClass}
                 placeholder="10-digit mobile number"
