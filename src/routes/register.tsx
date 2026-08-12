@@ -9,6 +9,11 @@ import registerBg from "@/assets/register-bg.png";
 
 import { getEvent } from "@/data/events";
 
+const GOOGLE_APPS_SCRIPT_URL =
+  "https://script.google.com/macros/s/AKfycbwk2CZ32lHhiTCbmEF5NGudc0LVIjYHZ7CqPLj-8YZqIFHe4rKdWy1zvBPDy-auVQ4u/exec";
+
+
+
 import {
   isValidRollNo,
   isValidEmail,
@@ -194,22 +199,13 @@ function RegisterPage() {
       return;
     }
 
-    /*
-     * Validate members
-     */
-    for (const [
-      index,
-      member,
-    ] of members.entries()) {
+    // Validate members
+    for (const [index, member] of members.entries()) {
       if (member.name.trim().length < 2) {
         setError(
-          `Please enter a valid name for member ${index + 1
-          }.`,
+          `Please enter a valid name for member ${index + 1}.`,
         );
 
-        /*
-         * Scroll to the error
-         */
         window.scrollTo({
           top: document.body.scrollHeight,
           behavior: "smooth",
@@ -220,22 +216,15 @@ function RegisterPage() {
 
       if (!isValidRollNo(member.rollNo)) {
         setError(
-          `Member ${index + 1
-          }: please enter a valid roll number.`,
+          `Member ${index + 1}: please enter a valid roll number.`,
         );
 
         return;
       }
     }
 
-    /*
-     * Member 1 email
-     */
-    if (
-      !isValidEmail(
-        members[0]?.email ?? "",
-      )
-    ) {
+    // Member 1 email
+    if (!isValidEmail(members[0]?.email ?? "")) {
       setError(
         "Please enter a valid email address for Member 1.",
       );
@@ -243,14 +232,8 @@ function RegisterPage() {
       return;
     }
 
-    /*
-     * Member 1 phone
-     */
-    if (
-      !isValidPhone(
-        members[0]?.phone ?? "",
-      )
-    ) {
+    // Member 1 phone
+    if (!isValidPhone(members[0]?.phone ?? "")) {
       setError(
         "Please enter a valid 10-digit phone number for Member 1.",
       );
@@ -258,17 +241,12 @@ function RegisterPage() {
       return;
     }
 
-    /*
-     * Duplicate roll numbers
-     */
+    // Prevent duplicate roll numbers within this team
     const rolls = members.map((member) =>
       normalizeRollNo(member.rollNo),
     );
 
-    if (
-      new Set(rolls).size !==
-      rolls.length
-    ) {
+    if (new Set(rolls).size !== rolls.length) {
       setError(
         "This student is already included in this team.",
       );
@@ -276,38 +254,73 @@ function RegisterPage() {
       return;
     }
 
-    /*
-     * Submit
-     */
     setSubmitting(true);
     setError(null);
 
     try {
-      /*
-       * Temporary frontend-only delay
-       */
-      await new Promise<void>(
-        (resolve) =>
-          setTimeout(resolve, 700),
+      const payload = {
+        eventId,
+        category: category ?? "",
+        members: members.map((member, index) => ({
+          name: member.name.trim(),
+          rollNo: normalizeRollNo(member.rollNo),
+
+          // Only Member 1 stores email and phone
+          email:
+            index === 0
+              ? String(member.email ?? "").trim()
+              : "",
+
+          phone:
+            index === 0
+              ? String(member.phone ?? "").trim()
+              : "",
+        })),
+      };
+
+      const response = await fetch(
+        GOOGLE_APPS_SCRIPT_URL,
+        {
+          method: "POST",
+          body: JSON.stringify(payload),
+        },
       );
 
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(
+          result.message ||
+          "Registration could not be completed.",
+        );
+      }
+
+      // Only show success after Apps Script confirms
       setRegistrationComplete(true);
 
-      /*
-       * Return to top after success
-       */
       window.scrollTo({
         top: 0,
         behavior: "smooth",
       });
-    } catch {
+    } catch (error) {
+      console.error(
+        "Registration error:",
+        error,
+      );
+
       setError(
-        "Something went wrong. Please try again.",
+        error instanceof Error
+          ? error.message
+          : "Something went wrong. Please try again.",
       );
     } finally {
       setSubmitting(false);
     }
   };
+  /*
+   * Validate members
+   */
+
 
   /*
    * Invalid event
@@ -442,8 +455,8 @@ function RegisterPage() {
               className="w-full"
               style={{
                 animation: `${direction === 1
-                    ? "slide-in-right"
-                    : "slide-in-left"
+                  ? "slide-in-right"
+                  : "slide-in-left"
                   } 0.45s cubic-bezier(0.22,1,0.36,1) both`,
               }}
             >

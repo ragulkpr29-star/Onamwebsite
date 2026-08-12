@@ -81,12 +81,7 @@ export function Hero() {
             </h1>
 
             {/* Tagline */}
-            <p
-              className="font-ui animate-rise mt-5 text-sm font-bold tracking-[0.18em] text-[#c99419] uppercase md:text-base"
-              style={{ animationDelay: "260ms" }}
-            >
-              Tradition. Togetherness. Triumph.
-            </p>
+
           </div>
 
           {/* Deadline */}
@@ -97,7 +92,7 @@ export function Hero() {
               </p>
 
               <p className="font-ui mt-2 text-lg font-bold text-red-600 md:text-xl">
-                23 August 2026
+                13 August 2026, by 6:00 PM
               </p>
             </div>
           </div>
